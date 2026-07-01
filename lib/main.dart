@@ -5,16 +5,10 @@
 // license that can be found in the LICENSE file or at
 // https://choosealicense.com/licenses/mit/
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'app/home_page.dart';
 
-void main() {
-  // For disabling landscape view
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations(
-    [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown],
-  );
+void main() {WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

@@ -2,9 +2,9 @@
     package="com.example.tip_calculator">
    <application
         android:label="Tip Calculator"
-        android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <activity
+        <!--suppress AndroidDomInspection -->
+       <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"

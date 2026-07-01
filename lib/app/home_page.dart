@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'widget/amount_text.dart';
@@ -12,385 +13,404 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   double _bill = 0;
-  int _tipPercentage = 0;
+  double _tipValue = 0; // Can be a percentage OR a flat amount
   int _numberOfPeople = 1;
-  final ScrollController _scrollController = ScrollController();
-  // This is the default Number Of People
-  static const defaultNumberOfPeople = 1;
+
   final _billAmountController = TextEditingController();
-  final _tipPercentageController = TextEditingController();
-  final _numberOfPeopleController =
-      TextEditingController(text: defaultNumberOfPeople.toString());
-  // For custom toggle button
-  List<String> selectedCategory = [];
-  String category1 = '5';
-  String category2 = '10';
-  String category3 = '15';
-  String category4 = '25';
-  String category5 = '50';
+  final _tipAmountController = TextEditingController(); // Flat cash tip
+  final _numberOfPeopleController = TextEditingController(text: '1');
+
+  String? _selectedPreset;
+  final List<String> _presets = ['5', '10', '15', '25', '50'];
 
   @override
   void initState() {
-    /// This is the `event listeners` of the TextEditingControllers
-    /// implemented using the [addListener] method
-    ///
-    _billAmountController.addListener(_onBillAmountChanged);
-    _tipPercentageController.addListener(_onTipAmountChanged);
-    _numberOfPeopleController.addListener(_numberOfPeopleChanged);
     super.initState();
+    _billAmountController.addListener(_onBillAmountChanged);
+    _tipAmountController.addListener(_onCustomTipChanged);
+    _numberOfPeopleController.addListener(_numberOfPeopleChanged);
   }
 
-  _onBillAmountChanged() {
+  void _onBillAmountChanged() {
     setState(() {
-      /// If the TextEditingController is `null`,
-      /// then it will assign `0`
       _bill = double.tryParse(_billAmountController.text) ?? 0;
     });
   }
 
-  _onTipAmountChanged() {
+  void _onCustomTipChanged() {
+    if (_tipAmountController.text.isNotEmpty) {
+      setState(() {
+        _selectedPreset = null;
+        _tipValue = double.tryParse(_tipAmountController.text) ?? 0;
+      });
+    } else if (_selectedPreset == null) {
+      setState(() {
+        _tipValue = 0;
+      });
+    }
+  }
+
+  void _numberOfPeopleChanged() {
     setState(() {
-      /// If the TextEditingController is `null`,
-      /// then it will assign `0`
-      _tipPercentage = int.tryParse(_tipPercentageController.text) ?? 0;
+      final int? value = int.tryParse(_numberOfPeopleController.text);
+      if (value != null && value > 0) {
+        _numberOfPeople = value;
+      } else {
+        _numberOfPeople = 1; // Safeguard for division
+      }
     });
   }
 
-  _numberOfPeopleChanged() {
-    setState(() {
-      /// If the TextEditingController is `null`,
-      /// then it will assign `1`
-      _numberOfPeople = int.tryParse(_numberOfPeopleController.text) ?? 1;
-    });
+  double _getTipAmount() {
+    if (_selectedPreset != null) {
+      return (_bill * _tipValue) / 100;
+    }
+    return _tipValue;
   }
 
-  // Tip-per-person calculation
-  _getTipAmount() => ((_bill * _tipPercentage) / 100) / _numberOfPeople;
-  // Total-amount-per-person calculation
-  _getTotalAmount() =>
-      (((_bill * _tipPercentage) / 100) + _bill) / _numberOfPeople;
+  double _getTotalAmount() => _bill + _getTipAmount();
 
-  _resetButtonAction() {
+  double _getPerPersonAmount() => _getTotalAmount() / _numberOfPeople;
+
+  void _resetButtonAction() {
     setState(() {
-      selectedCategory = [];
+      _selectedPreset = null;
       _bill = 0;
-      _tipPercentage = 0;
+      _tipValue = 0;
       _numberOfPeople = 1;
       _billAmountController.clear();
-      _tipPercentageController.clear();
-      _numberOfPeopleController.clear();
+      _tipAmountController.clear();
+      _numberOfPeopleController.text = '1';
     });
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _billAmountController.dispose();
-    _tipPercentageController.dispose();
+    _tipAmountController.dispose();
     _numberOfPeopleController.dispose();
-    _billAmountController.removeListener(_onBillAmountChanged);
-    _tipPercentageController.removeListener(_onTipAmountChanged);
-    _numberOfPeopleController.removeListener(_numberOfPeopleChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    /// toggle button & custom input
-    /// width
-    ///
-    double width = MediaQuery.of(context).size.width * (.41);
-
-    /// `reset` button action
-    ///
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Stack(
-          children: [
-            background(),
-            SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                children: [
-                  transparentContainer(140),
-                  Container(
-                    height: 770,
-                    width: double.infinity,
-                    decoration: containerDecoration,
-                    child: Padding(
-                      padding: const EdgeInsets.all(25.0),
-                      child: Column(
-                        children: [
-                          billingInputInfo(),
-                          const SizedBox(height: 30.0),
-                          Column(
-                            children: [
-                              Row(children: [
-                                Text('Select Tip %', style: labelText)
-                              ]),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 13,
-                                runSpacing: 13,
-                                children: [
-                                  toggleButton(category1, width),
-                                  toggleButton(category2, width),
-                                  toggleButton(category3, width),
-                                  toggleButton(category4, width),
-                                  toggleButton(category5, width),
-                                  selectTipPercentageInfo(width),
-                                ],
-                              )
-                            ],
-                          ),
-                          const SizedBox(height: 30.0),
-                          numberOfPeopleInputInfo(),
-                          const SizedBox(height: 30.0),
-                          outputCardInfo(),
-                        ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double maxWidth = constraints.maxWidth;
+            final bool isDesktop = maxWidth > 800;
+            const double sidePadding = 32.0;
+            const double contentMaxWidth = 1000.0;
+            
+            // Calculate available width for the input section
+            // Padding (32*2) + Spacing (48) in desktop
+            final double horizontalPadding = sidePadding * 2;
+            const double desktopSpacing = 48.0;
+            
+            final double availableWidth = isDesktop 
+                ? max(0.0, (min(maxWidth, contentMaxWidth) - horizontalPadding - desktopSpacing) / 2)
+                : max(0.0, maxWidth - horizontalPadding);
+
+            return SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: contentMaxWidth),
+                  child: Column(
+                    children: [
+                      logoWidget(),
+                      Padding(
+                        padding: isDesktop
+                            ? const EdgeInsets.only(bottom: 40)
+                            : EdgeInsets.zero,
+                        child: Container(
+                          decoration: isDesktop
+                              ? desktopContainerDecoration
+                              : containerDecoration,
+                          padding: const EdgeInsets.all(sidePadding),
+                          child: isDesktop
+                              ? IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _buildInputSection(
+                                          availableWidth: availableWidth,
+                                          columns: 3,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 48),
+                                      Expanded(child: _buildOutputSection(expand: true)),
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  children: [
+                                    _buildInputSection(
+                                      availableWidth: availableWidth,
+                                      columns: availableWidth > 400 ? 3 : 2,
+                                    ),
+                                    const SizedBox(height: 32),
+                                    _buildOutputSection(expand: false),
+                                  ],
+                                ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  /// This is for taking user input of `billing information`
-  ///
-  Widget billingInputInfo() {
+  Widget _buildInputSection({
+    required double availableWidth,
+    required int columns,
+  }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [Text('Bill', style: labelText)]),
-        const SizedBox(height: 10),
-        Container(
-          height: 46,
-          padding: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(7.0),
+        _buildTextField(
+          label: 'Total Due:',
+          controller: _billAmountController,
+          icon: Icons.attach_money,
+          hint: '0',
+          textInputAction: TextInputAction.next,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+        const SizedBox(height: 40),
+        _buildTextField(
+          label: 'Ways to split bill:',
+          controller: _numberOfPeopleController,
+          icon: Icons.person,
+          hint: '1',
+          textInputAction: TextInputAction.next,
+          keyboardType: TextInputType.number,
+          errorText: _numberOfPeopleController.text == '0' ? "Can't be zero" : null,
+        ),
+        const SizedBox(height: 40),
+        Text('Tip Percentage:', style: labelText),
+        const SizedBox(height: 16),
+        _buildTipGrid(width: availableWidth, columns: columns),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    required TextInputAction textInputAction,
+    TextInputType? keyboardType,
+    String? errorText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: labelText),
+            if (errorText != null)
+              Text(
+                errorText,
+                style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Semantics(
+          label: label,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F8FB),
+              borderRadius: BorderRadius.circular(5),
+              border: errorText != null
+                  ? Border.all(color: Colors.red.withOpacity(0.5), width: 2)
+                  : null,
+            ),
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.end,
+              textInputAction: textInputAction,
+              style: const TextStyle(
+                fontSize: 24,
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                prefixIcon: Icon(icon, color: textColor),
+                hintText: hint,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
           ),
-          child: TextFormField(
-            controller: _billAmountController,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTipGrid({required double width, required int columns}) {
+    const double spacing = 16;
+    final double itemWidth = max(0.0, (width - (spacing * (columns - 1))) / columns);
+
+    return Wrap(
+      spacing: spacing,
+      runSpacing: spacing,
+      children: [
+        ..._presets.map((p) => _buildPresetButton(p, itemWidth)),
+        _buildCustomTipInput(itemWidth),
+      ],
+    );
+  }
+
+  Widget _buildPresetButton(String percentage, double width) {
+    bool isSelected = _selectedPreset == percentage;
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$percentage percent tip',
+      child: SizedBox(
+        width: width,
+        height: 48,
+        child: Material(
+          color: isSelected ? accentColor : primaryColor,
+          borderRadius: BorderRadius.circular(5),
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _selectedPreset = percentage;
+                _tipValue = double.parse(percentage);
+                _tipAmountController.clear();
+              });
+            },
+            borderRadius: BorderRadius.circular(5),
+            child: Center(
+              child: Text(
+                '$percentage%',
+                style: TextStyle(
+                  color: isSelected ? primaryColor : Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomTipInput(double width) {
+    return Semantics(
+      label: 'Custom flat tip amount',
+      child: Container(
+        width: width,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F8FB),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Center(
+          child: TextField(
+            controller: _tipAmountController,
+            textAlign: TextAlign.end,
             style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFF00494D),
+              fontSize: 18,
+              color: primaryColor,
               fontWeight: FontWeight.bold,
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textDirection: TextDirection.rtl,
             decoration: const InputDecoration(
-              icon: Padding(
-                padding: EdgeInsets.only(left: 10.0),
-                child: Icon(
-                  Icons.attach_money_outlined,
-                  color: Colors.grey,
-                ),
-              ),
-              hintText: 'Bill',
-              hintStyle: TextStyle(
-                fontSize: 20,
-                color: Colors.grey,
-                fontWeight: FontWeight.bold,
-              ),
-              hintTextDirection: TextDirection.rtl,
+              hintText: 'Custom',
+              hintStyle: TextStyle(fontSize: 16),
+              prefixIcon: Icon(Icons.attach_money, color: textColor, size: 18),
               border: InputBorder.none,
-              fillColor: Colors.white,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  /// This is for taking user input of `select tip %`
-  ///
-  Widget selectTipPercentageInfo(double width) {
+  Widget _buildOutputSection({bool expand = false}) {
     return Container(
-      width: width,
-      height: 46,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(7.0),
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(15),
       ),
-      child: TextFormField(
-        controller: _tipPercentageController,
-        onTap: () => selectedCategory = [],
-        style: const TextStyle(
-          fontSize: 24,
-          color: Color(0xFF00494D),
-          fontWeight: FontWeight.bold,
-        ),
-        keyboardType: const TextInputType.numberWithOptions(decimal: false),
-        textDirection: TextDirection.rtl,
-        decoration: const InputDecoration(
-          suffixIcon: Icon(Icons.percent, color: Colors.grey),
-          hintText: 'Custom',
-          hintStyle: TextStyle(
-            fontSize: 21,
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-          hintTextDirection: TextDirection.rtl,
-          border: InputBorder.none,
-          fillColor: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  /// This is for taking user input of `number of people`
-  ///
-  Widget numberOfPeopleInputInfo() {
-    return Column(
-      children: [
-        Row(children: [Text('Number of People', style: labelText)]),
-        const SizedBox(height: 10),
-        Container(
-          height: 46,
-          padding: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(7.0),
-          ),
-          child: TextFormField(
-            controller: _numberOfPeopleController,
-            style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFF00494D),
-              fontWeight: FontWeight.bold,
-            ),
-            //keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textDirection: TextDirection.rtl,
-            decoration: const InputDecoration(
-              icon: Padding(
-                padding: EdgeInsets.only(left: 10.0),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.grey,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Column(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          _buildOutputBox('Tip Amount', _getTipAmount()),
+          const SizedBox(height: 24),
+          _buildOutputBox('TOTAL DUE', _getTotalAmount()),
+          const Divider(color: accentColor, height: 48, thickness: 1),
+          _buildOutputBox('Split Due:', _getPerPersonAmount()),
+          if (expand) const Spacer() else const SizedBox(height: 40),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: (_bill > 0 || _tipValue > 0 || _numberOfPeople > 1)
+                  ? _resetButtonAction
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: primaryColor,
+                disabledBackgroundColor: accentColor.withOpacity(0.2),
+                disabledForegroundColor: primaryColor.withOpacity(0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              hintText: 'Number of People',
-              hintStyle: TextStyle(
-                fontSize: 20,
-                color: Colors.grey,
+              child: const Text('RESET'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutputBox(String label, double amount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              hintTextDirection: TextDirection.rtl,
-              border: InputBorder.none,
-              fillColor: Colors.white,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  GestureDetector toggleButton(String category, double width) {
-    return GestureDetector(
-      onTap: () {
-        _tipPercentageController.clear();
-        selectedCategory = [];
-        selectedCategory.add(category);
-        //debugPrint(selectedCategory.toString());
-        /// `Converting` selectedCategory from STRING to INT
-        ///
-        int selectedTip = int.parse(selectedCategory[0]);
-        //debugPrint(selectedTip.toString());
-        setState(() {
-          _tipPercentage = selectedTip;
-        });
-      },
-      child: Container(
-        width: width,
-        height: 46,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selectedCategory.contains(category)
-              ? const Color(0xff26C0AB)
-              : const Color(0xff00494d),
-          borderRadius: BorderRadius.circular(7.0),
-        ),
-        child: Text(
-          '$category%',
-          style: TextStyle(
-            fontSize: 24,
-            color: selectedCategory.contains(category)
-                ? const Color(0xff00494d)
-                : Colors.white,
-            fontWeight: FontWeight.bold,
+          AmountText(
+            text: amount.toStringAsFixed(2),
+            label: label,
           ),
-        ),
-      ),
-    );
-  }
-
-  /// This is for displaying output `information`
-  ///
-  Widget outputCardInfo() {
-    return Container(
-      height: 260,
-      decoration: BoxDecoration(
-        color: const Color(0xFF00494D),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                titleDesc('Tip Amount', '/ person'),
-                AmountText(
-                  text: '${_getTipAmount().toStringAsFixed(2)}',
-                  key: const Key('tipAmount'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                titleDesc('Total', '/ person'),
-                AmountText(
-                  text: '${_getTotalAmount().toStringAsFixed(2)}',
-                  key: const Key('totalAmount'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(primary: const Color(0xFF26c0ab)),
-              child: const Padding(
-                padding: EdgeInsets.only(
-                  top: 8.0,
-                  bottom: 8.0,
-                  left: 92.0,
-                  right: 92.0,
-                ),
-                child: Text(
-                  'RESET',
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: Color(0xFF00494D),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              onPressed: () {
-                //debugPrint('Reset button pressed');
-                _resetButtonAction();
-              },
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

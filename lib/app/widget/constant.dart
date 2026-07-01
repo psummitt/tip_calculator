@@ -1,47 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 /// background `color`
-///
-Color backgroundColor = const Color(0xFFC5E4E7);
+const Color backgroundColor = Color(0xFFC5E4E7);
+const Color primaryColor = Color(0xFF00494D);
+const Color accentColor = Color(0xFF26C0AB);
+const Color textColor = Color(0xFF5E7A7D);
 
 /// default textStyle for `labels`
-///
 TextStyle labelText = const TextStyle(
   fontSize: 18,
   fontWeight: FontWeight.bold,
-  color: Color(0xFF5E7A7D),
+  color: textColor,
 );
 
-Widget background() => Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Expanded(
-          flex: 1,
-          child: Center(child: SvgPicture.asset('assets/images/logo.svg')),
+Widget logoWidget() => const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
+      child: Text(
+        'TIP\nCALCULATOR',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 24,
+          letterSpacing: 10,
+          fontWeight: FontWeight.bold,
+          color: primaryColor,
         ),
-        const Expanded(flex: 4, child: SizedBox())
-      ],
-    );
-
-Widget transparentContainer(double height) => Container(
-      height: height,
-      width: double.infinity,
-      color: Colors.transparent,
+      ),
     );
 
 BoxDecoration containerDecoration = BoxDecoration(
   color: Colors.white,
-  borderRadius: const BorderRadius.only(
-    topLeft: Radius.circular(25.0),
-    topRight: Radius.circular(25.0),
-  ),
+  borderRadius: const BorderRadius.vertical(top: Radius.circular(25.0)),
   boxShadow: [
     BoxShadow(
-      color: Colors.grey.withOpacity(0.5),
+      color: Colors.grey.withValues(alpha: 0.5),
       spreadRadius: 5,
       blurRadius: 7,
       offset: const Offset(0, 3),
+    ),
+  ],
+);
+
+BoxDecoration desktopContainerDecoration = BoxDecoration(
+  color: Colors.white,
+  borderRadius: BorderRadius.circular(25.0),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.grey.withValues(alpha: 0.3),
+      spreadRadius: 5,
+      blurRadius: 15,
+      offset: const Offset(0, 5),
     ),
   ],
 );
@@ -54,11 +61,15 @@ Widget titleDesc(String title, String desc) => Column(
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
         ),
         Text(
           desc,
-          style: const TextStyle(color: Color(0xFF7f9c9f)),
+          style: const TextStyle(
+            color: Color(0xFF7f9c9f),
+            fontSize: 14,
+          ),
         ),
       ],
     );
