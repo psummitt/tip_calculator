@@ -7,7 +7,7 @@
 # Tip Calculator
 
 <img align="right" src="screenshots/stores_logos/playstore.png" height="190"></img>
-This application is an UI challenge from <a href = "https://www.frontendmentor.io/challenges/tip-calculator-app-ugJNGbJUX">frontend mentor</a>. It is a 'Tip Calculator'. It's an open-source project, hence use of the source code is governed by an MIT-style license that can be found in the LICENSE file or at <a href = "https://choosealicense.com/licenses/mit/">MIT LICENSE Info.</a>
+This application was a UI challenge from <a href = "https://www.frontendmentor.io/challenges/tip-calculator-app-ugJNGbJUX">frontend mentor</a>. It is a 'Tip Calculator'. It's an open-source project, hence use of the source code is governed by an MIT-style license that can be found in the LICENSE file or at <a href = "https://choosealicense.com/licenses/mit/">MIT LICENSE Info.</a> The application has been modified slightly to meet user and developer needs.
 
 ## Packages Used
 
